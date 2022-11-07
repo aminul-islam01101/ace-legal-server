@@ -52,6 +52,9 @@ run().catch((err) => console.log(err));
 // Error middleware
 // 404 handlers
 
+app.use('/', (req, res) => {
+    res.send('Great! server running successfully');
+});
 app.use((req, res) => {
     res.status(404).send('404 error! url does not exist');
 });
