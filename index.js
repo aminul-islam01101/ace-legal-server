@@ -39,10 +39,11 @@ const run = async () => {
             const query = {};
 
             const cursor = serviceCollection.find(query);
+            const fewServices = await cursor.limit(3).toArray();
 
-            const services = await cursor.toArray();
+            const allServices = await cursor.toArray();
 
-            res.send(services);
+            res.send({ fewServices, allServices });
         });
     } finally {
     }
