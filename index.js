@@ -4,7 +4,7 @@ import colors from 'colors';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectID } from 'mongodb';
 
 // port and env
 dotenv.config();
@@ -38,12 +38,21 @@ const run = async () => {
         app.get('/services', async (req, res) => {
             const query = {};
 
-            const cursor = serviceCollection.find(query);
-            const fewServices = await cursor.limit(3).toArray();
-
+            const cursor = serviceCollection.find(query).sort({ timestamp: -1 });
             const allServices = await cursor.toArray();
 
+            const fewCursor = serviceCollection.find(query).sort({ timestamp: -1 });
+            const fewServices = await fewCursor.limit(3).toArray();
+
             res.send({ fewServices, allServices });
+        });
+        app.get('/service/:id', async (req, res) => {
+            const { id } = req.params;
+
+            const query = { _id: ObjectID(id) };
+            const service = await serviceCollection.findOne(query);
+
+            res.send(service);
         });
     } finally {
     }
