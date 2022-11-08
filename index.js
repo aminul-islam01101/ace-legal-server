@@ -25,6 +25,7 @@ colors.setTheme({
 // Set up default mongodb connection
 
 const mongoDB = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.dtbllhc.mongodb.net/?retryWrites=true&w=majority`;
+// const mongoDB = 'mongodb://localhost:27017';
 
 const client = new MongoClient(mongoDB, {
     useNewUrlParser: true,
@@ -53,6 +54,48 @@ const run = async () => {
             const service = await serviceCollection.findOne(query);
 
             res.send(service);
+        });
+        app.get('/reviews', async (req, res) => {
+            const { id } = req.query;
+            const { email } = req.query;
+            let query = {};
+            if (id && email) {
+                query = {
+                    serviceId: id,
+                    email,
+                };
+            }
+            if (email) {
+                query = {
+                    email,
+                };
+            }
+            if (id) {
+                query = {
+                    serviceId: id,
+                };
+            }
+            const cursor = await reviewCollection.find(query).sort({ timestamp: -1 });
+            const reviews = await cursor.toArray();
+
+            res.send(reviews);
+        });
+        // // find all reviews
+        // app.get('/reviews', async (req, res) => {
+        //     const query = {};
+
+        //     const cursor = reviewCollection.find(query).sort({ timestamp: -1 });
+        //     const reviews = await cursor.toArray();
+
+        //     res.send(reviews);
+        // });
+        // review posting to collection
+        app.post('/review', async (req, res) => {
+            const data = req.body;
+
+            const review = await reviewCollection.insertOne(data);
+
+            res.send(review);
         });
     } finally {
     }
