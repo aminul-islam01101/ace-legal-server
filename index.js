@@ -1,10 +1,12 @@
+/* eslint-disable consistent-return */
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-empty */
 import colors from 'colors';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import { MongoClient, ObjectID } from 'mongodb';
+import jwt from 'jsonwebtoken';
+import { MongoClient, ObjectId } from 'mongodb';
 
 // port and env
 dotenv.config();
@@ -31,18 +33,41 @@ const client = new MongoClient(mongoDB, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
+
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+        return res.status(401).send({ message: 'unauthorized access !' });
+    }
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access' });
+        }
+        req.decoded = decoded;
+        next();
+    });
+}
 const run = async () => {
     try {
         const serviceCollection = client.db('aceLegalDb').collection('services');
         const reviewCollection = client.db('aceLegalDb').collection('reviews');
 
+        app.post('/jwt', (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+            res.send({ token });
+        });
+
         app.get('/services', async (req, res) => {
             const query = {};
 
-            const cursor = serviceCollection.find(query).sort({ timestamp: -1 });
+            const cursor = serviceCollection.find(query).sort({ date: -1 });
             const allServices = await cursor.toArray();
 
-            const fewCursor = serviceCollection.find(query).sort({ timestamp: -1 });
+            const fewCursor = serviceCollection.find(query).sort({ date: -1 });
             const fewServices = await fewCursor.limit(3).toArray();
 
             res.send({ fewServices, allServices });
@@ -50,36 +75,95 @@ const run = async () => {
         app.get('/service/:id', async (req, res) => {
             const { id } = req.params;
 
-            const query = { _id: ObjectID(id) };
+            const query = { _id: ObjectId(id) };
             const service = await serviceCollection.findOne(query);
 
             res.send(service);
         });
-        app.get('/reviews', async (req, res) => {
-            const { id } = req.query;
+
+        app.get('/reviewsByEmail', verifyJWT, async (req, res) => {
             const { email } = req.query;
-            let query = {};
-            if (id && email) {
-                query = {
-                    serviceId: id,
-                    email,
-                };
+
+            const { decoded } = req;
+
+            if (decoded.email !== email) {
+                res.status(403).send({ message: 'unauthorized access in server' });
             }
-            if (email) {
-                query = {
-                    email,
-                };
-            }
-            if (id) {
-                query = {
-                    serviceId: id,
-                };
-            }
-            const cursor = await reviewCollection.find(query).sort({ timestamp: -1 });
+
+            const query = {
+                email,
+            };
+
+            const cursor = reviewCollection.find(query);
             const reviews = await cursor.toArray();
 
-            res.send(reviews);
+            res.send({
+                success: true,
+                reviews,
+            });
         });
+        app.get('/reviewsById', async (req, res) => {
+            const { id } = req.query;
+
+            const query = { serviceId: id };
+
+            const cursor = reviewCollection.find(query).sort({ date: -1 });
+            const reviews = await cursor.toArray();
+
+            res.send({
+                success: true,
+                reviews,
+            });
+        });
+        //  find a review
+        app.get('/review/:id', async (req, res) => {
+            const { id } = req.params;
+
+            const query = { _id: ObjectId(id) };
+            const review = await reviewCollection.findOne(query);
+
+            res.send(review);
+        });
+        // patch operation
+        app.patch('/myreview/:id', verifyJWT, async (req, res) => {
+            const { id } = req.params;
+            const { message, ratings } = req.body;
+            const query = { _id: ObjectId(id) };
+            const updatedReview = {
+                $set: {
+                    message,
+                    ratings,
+                },
+            };
+            const result = await reviewCollection.updateOne(query, updatedReview);
+            res.send(result);
+        });
+
+        // delete operation
+
+        app.delete('/myreview/:id', verifyJWT, async (req, res) => {
+            const { id } = req.params;
+
+            const query = { _id: ObjectId(id) };
+            const result = await reviewCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        // app.get('/reviews', async (req, res) => {
+        //     const { id } = req.query;
+        //     const { email } = req.query;
+        //     let query = {};
+
+        //     query = {
+        //         serviceId: id,
+        //         email,
+        //     };
+
+        //     const reviews = await reviewCollection.findOne(query);
+
+        //     res.send(reviews);
+        // });
+
         // // find all reviews
         // app.get('/reviews', async (req, res) => {
         //     const query = {};
@@ -89,6 +173,16 @@ const run = async () => {
 
         //     res.send(reviews);
         // });
+
+        // Service Posting to collection
+        app.post('/service', async (req, res) => {
+            const data = req.body;
+
+            const service = await serviceCollection.insertOne(data);
+
+            res.send(service);
+        });
+
         // review posting to collection
         app.post('/review', async (req, res) => {
             const data = req.body;
