@@ -158,31 +158,9 @@ const run = async () => {
             res.send(result);
         });
 
-        // app.get('/reviewBySingle', async (req, res) => {
-        //     const { id } = req.query;
-        //     const { email } = req.query;
-        //     let query = {};
+      
 
-        //     query = {
-        //         serviceId: id,
-        //         email,
-        //     };
-
-        //     const review = await reviewCollection.findOne(query);
-
-        //     res.send(review);
-        // });
-
-        // // find all reviews
-        // app.get('/reviews', async (req, res) => {
-        //     const query = {};
-
-        //     const cursor = reviewCollection.find(query).sort({ timestamp: -1 });
-        //     const reviews = await cursor.toArray();
-
-        //     res.send(reviews);
-        // });
-
+  
         // Service Posting to collection
         app.post('/service', async (req, res) => {
             const data = req.body;
