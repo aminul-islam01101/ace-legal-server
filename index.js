@@ -60,7 +60,7 @@ const run = async () => {
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
             res.send({ token });
         });
-
+        // all service operation
         app.get('/services', async (req, res) => {
             const query = {};
 
@@ -71,6 +71,15 @@ const run = async () => {
             const fewServices = await fewCursor.limit(3).toArray();
 
             res.send({ fewServices, allServices });
+        });
+        // all review operation
+        app.get('/reviews', async (req, res) => {
+            const query = {};
+
+            const cursor = reviewCollection.find(query).sort({ date: -1 });
+            const reviews = await cursor.toArray();
+
+            res.send(reviews);
         });
         app.get('/service/:id', async (req, res) => {
             const { id } = req.params;
@@ -149,7 +158,7 @@ const run = async () => {
             res.send(result);
         });
 
-        // app.get('/reviews', async (req, res) => {
+        // app.get('/reviewBySingle', async (req, res) => {
         //     const { id } = req.query;
         //     const { email } = req.query;
         //     let query = {};
@@ -159,9 +168,9 @@ const run = async () => {
         //         email,
         //     };
 
-        //     const reviews = await reviewCollection.findOne(query);
+        //     const review = await reviewCollection.findOne(query);
 
-        //     res.send(reviews);
+        //     res.send(review);
         // });
 
         // // find all reviews
