@@ -158,9 +158,6 @@ const run = async () => {
             res.send(result);
         });
 
-      
-
-  
         // Service Posting to collection
         app.post('/service', async (req, res) => {
             const data = req.body;
